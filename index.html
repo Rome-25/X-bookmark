@@ -2,16 +2,17 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <title>イラスト管理 v0.3</title>
 
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="X Bookmark">
-<input type="file" id="importInput" accept=".json">
-<button id="importBtn">バックアップ復元</button>
 
+
+
+  
 <style>
 body {
   font-family: system-ui, sans-serif;
@@ -127,7 +128,8 @@ button {
   <input type="text" id="tagInput" placeholder="タグ（カンマ区切り）"><br>
   <button onclick="addItem()">追加</button>
   <button id="exportBtn">バックアップ保存</button>
-
+　<input type="file" id="importInput" accept=".json">
+  <button id="importBtn">バックアップ復元</button>
 </div>
 
 <h2>並び順</h2>
@@ -362,6 +364,7 @@ render();
 
 </body>
 </html>
+
 
 
 
