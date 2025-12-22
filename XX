@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>イラスト管理 v0.3</title>
+<style>
+body {
+  font-family: system-ui, sans-serif;
+  margin: 16px;
+}
+h1 { font-size: 20px; }
+
+#list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 8px;
+}
+
+.card img {
+  width: 100%;
+  display: block;
+  cursor: pointer;
+}
+
+.tag {
+  display: inline-block;
+  padding: 2px 6px;
+  margin: 2px;
+  border: 1px solid #888;
+  cursor: pointer;
+  font-size: 12px;
+}
+.tag.active {
+  background: #ddd;
+}
+
+/* モーダル */
+#modal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.8);
+  align-items: center;
+  justify-content: center;
+}
+#modalContent {
+  background: #fff;
+  padding: 10px;
+  max-width: 90%;
+  max-height: 90%;
+}
+#modalImage {
+  max-width: 100%;
+  max-height: 50vh;
+  display: block;
+  margin-bottom: 8px;
+}
+
+label {
+  font-size: 12px;
+  color: #555;
+}
+textarea, input[type=text] {
+  width: 100%;
+  box-sizing: border-box;
+}
+</style>
+</head>
+<body>
+
+<h1>絵ブックマーク</h1>
+
+<div>
+  <input type="file" id="imageInput" accept="image/*"><br>
+  <input type="text" id="urlInput" placeholder="元ツイートURL（任意）"><br>
+  <input type="text" id="authorInput" placeholder="作者名"><br>
+  <input type="text" id="tagInput" placeholder="タグ（カンマ区切り）"><br>
+  <button onclick="addItem()">追加</button>
+</div>
+
+<h2>並び順</h2>
+<select id="sortSelect" onchange="render()">
+  <option value="new">新しい順</option>
+  <option value="old">古い順</option>
+  <option value="fav">お気に入り優先</option>
+</select>
+
+<h2>タグ</h2>
+<div id="tags"></div>
+
+<h2>一覧</h2>
+<div id="list"></div>
+
+<!-- モーダル -->
+<div id="modal">
+  <div id="modalContent">
+    <button onclick="closeModal()">×</button>
+
+    <img id="modalImage">
+
+    <div>
+      ⭐ <button id="favBtn"></button>
+    </div>
+
+    <div>
+      <strong>作者：</strong>
+      <span id="modalAuthor" style="cursor:pointer; text-decoration:underline"></span>
+    </div>
+
+    <label>作者メモ</label>
+    <textarea id="authorMemo" rows="2"></textarea>
+
+    <h3>タグ（Enterで追加）</h3>
+    <div id="modalTags"></div>
+    <input type="text" id="modalTagInput" placeholder="タグを入力してEnter">
+
+    <br><br>
+    <button id="openUrlBtn">元ツイートを見る</button>
+    <button id="deleteBtn">削除</button>
+  </div>
+</div>
+
+<script>
+const STORAGE_KEY = "artBookmarks";
+let items = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+let activeTag = null;
+let activeAuthor = null;
+let currentItem = null;
+
+function save() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+}
+
+function addItem() {
+  const file = imageInput.files[0];
+  if (!file) return alert("画像を選択してください");
+
+  const reader = new FileReader();
+  reader.onload = () => {
+    items.unshift({
+      id: Date.now(),
+      image: reader.result,
+      url: urlInput.value,
+      author: authorInput.value.trim(),
+      authorMemo: "",
+      tags: tagInput.value.split(",").map(t => t.trim()).filter(Boolean),
+      favorite: false
+    });
+    save();
+    imageInput.value = "";
+    urlInput.value = "";
+    authorInput.value = "";
+    tagInput.value = "";
+    render();
+  };
+  reader.readAsDataURL(file);
+}
+
+function render() {
+  renderTags();
+  renderList();
+}
+
+function renderTags() {
+  const allTags = [...new Set(items.flatMap(i => i.tags))];
+  tags.innerHTML = "";
+  allTags.forEach(t => {
+    const span = document.createElement("span");
+    span.className = "tag" + (t === activeTag ? " active" : "");
+    span.textContent = t;
+    span.onclick = () => {
+      activeTag = (activeTag === t) ? null : t;
+      activeAuthor = null;
+      render();
+    };
+    tags.appendChild(span);
+  });
+}
+
+function renderList() {
+  list.innerHTML = "";
+  let filtered = items.filter(i =>
+    (!activeTag || i.tags.includes(activeTag)) &&
+    (!activeAuthor || i.author === activeAuthor)
+  );
+
+  const sort = sortSelect.value;
+  if (sort === "old") filtered = [...filtered].reverse();
+  if (sort === "fav") filtered = [...filtered].sort((a,b) => b.favorite - a.favorite);
+
+  filtered.forEach(i => {
+    const img = document.createElement("img");
+    img.src = i.image;
+    img.onclick = () => openModal(i);
+    const div = document.createElement("div");
+    div.className = "card";
+    div.appendChild(img);
+    list.appendChild(div);
+  });
+}
+
+/* ===== モーダル ===== */
+
+function openModal(item) {
+  currentItem = item;
+  modal.style.display = "flex";
+  modalImage.src = item.image;
+
+  favBtn.textContent = item.favorite ? "解除" : "お気に入り";
+  favBtn.onclick = () => {
+    item.favorite = !item.favorite;
+    save();
+    openModal(item);
+    render();
+  };
+
+  modalAuthor.textContent = item.author || "(未設定)";
+  modalAuthor.onclick = () => {
+    if (item.author) {
+      activeAuthor = item.author;
+      activeTag = null;
+      closeModal();
+      render();
+    }
+  };
+
+  authorMemo.value = item.authorMemo || "";
+  authorMemo.onchange = () => {
+    item.authorMemo = authorMemo.value;
+    save();
+  };
+
+  renderModalTags();
+
+  openUrlBtn.onclick = () => {
+    if (item.url) window.open(item.url, "_blank");
+  };
+
+  deleteBtn.onclick = () => {
+    if (confirm("この画像を削除する？")) {
+      items = items.filter(i => i.id !== item.id);
+      save();
+      closeModal();
+      render();
+    }
+  };
+}
+
+function renderModalTags() {
+  modalTags.innerHTML = "";
+  currentItem.tags.forEach(t => {
+    const span = document.createElement("span");
+    span.className = "tag";
+    span.textContent = t;
+    span.onclick = () => {
+      if (confirm(`タグ「${t}」を削除する？`)) {
+        currentItem.tags = currentItem.tags.filter(x => x !== t);
+        save();
+        renderModalTags();
+        render();
+      }
+    };
+    modalTags.appendChild(span);
+  });
+}
+
+modalTagInput.addEventListener("keydown", e => {
+  if (e.key === "Enter") {
+    e.preventDefault();
+    const t = modalTagInput.value.trim();
+    if (t && !currentItem.tags.includes(t)) {
+      currentItem.tags.push(t);
+      save();
+      renderModalTags();
+      render();
+    }
+    modalTagInput.value = "";
+  }
+});
+
+function closeModal() {
+  modal.style.display = "none";
+  currentItem = null;
+}
+
+render();
+</script>
+
+</body>
+</html>
