@@ -9,6 +9,8 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="X Bookmark">
+<input type="file" id="importInput" accept=".json">
+<button id="importBtn">バックアップ復元</button>
 
 <style>
 body {
@@ -124,6 +126,8 @@ button {
   <input type="text" id="authorInput" placeholder="作者名"><br>
   <input type="text" id="tagInput" placeholder="タグ（カンマ区切り）"><br>
   <button onclick="addItem()">追加</button>
+  <button id="exportBtn">バックアップ保存</button>
+
 </div>
 
 <h2>並び順</h2>
@@ -332,12 +336,33 @@ function closeModal() {
   modal.style.display = "none";
   currentItem = null;
 }
+  
+document.getElementById("importBtn").onclick = () => {
+  const file = document.getElementById("importInput").files[0];
+  if (!file) return alert("JSONファイルを選んでください");
+
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const imported = JSON.parse(reader.result);
+      if (!Array.isArray(imported)) throw "不正な形式です";
+      items = imported; // 上書き
+      save();
+      render();
+      alert("復元しました！");
+    } catch (e) {
+      alert("読み込みに失敗しました: " + e);
+    }
+  };
+  reader.readAsText(file);
+};
 
 render();
 </script>
 
 </body>
 </html>
+
 
 
 
