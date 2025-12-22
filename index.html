@@ -52,10 +52,14 @@ h1 { font-size: 20px; }
 }
 #modalContent {
   background: #fff;
-  padding: 10px;
+  padding: 8px;
   max-width: 95vw;
   max-height: 95vh;
+
+  overflow-y: auto;   /* ← これを必ず入れる */
+  box-sizing: border-box;
 }
+
 #modalImage {
   max-width: 100%;
   max-height: 90vh;
@@ -318,6 +322,7 @@ render();
 
 </body>
 </html>
+
 
 
 
