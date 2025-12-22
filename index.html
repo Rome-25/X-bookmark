@@ -3,36 +3,78 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-<title>イラスト管理 v0.4</title>
+<title>イラスト管理 v0.7</title>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="X Bookmark">
 
 <style>
-body { font-family: system-ui, sans-serif; margin: 16px; }
+body {
+  font-family: system-ui, sans-serif;
+  margin: 16px;
+}
 h1 { font-size: 20px; }
-#list { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 8px; }
-.card img { width: 100%; display: block; cursor: pointer; }
-.tag { display: inline-block; padding: 2px 6px; margin: 2px; border: 1px solid #888; cursor: pointer; font-size: 12px; }
-.tag.active { background: #ddd; }
-hr { margin: 12px 0; border: none; border-top: 1px solid #ddd; }
+
+#list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 8px;
+}
+.card img {
+  width: 100%;
+  display: block;
+  cursor: pointer;
+}
+.tag {
+  display: inline-block;
+  padding: 2px 6px;
+  margin: 2px;
+  border: 1px solid #888;
+  cursor: pointer;
+  font-size: 12px;
+}
+.tag.active {
+  background: #ddd;
+}
+input, button, select, textarea {
+  font-size: 14px;
+  padding: 6px;
+  margin-bottom: 6px;
+  box-sizing: border-box;
+}
+
 /* モーダル */
-#modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); align-items: center; justify-content: center; }
-#modalContent { background: #fff; padding: 8px; max-width: 95vw; max-height: 95vh; overflow-y: auto; box-sizing: border-box; }
-#modalImage { max-width: 100%; max-height: 70vh; display: block; margin:0 auto 10px; }
-#modalTagInput { width: 100%; max-width: 100%; box-sizing: border-box; }
-label { font-size: 12px; color: #555; }
-textarea { width: 100%; max-width: 280px; height: 32px !important; min-height: 32px !important; font-size: 14px; padding: 4px 8px; box-sizing: border-box; resize: none; overflow: hidden; }
-input[type="text"] { width: 100%; max-width: 280px; height: 32px; font-size: 14px; padding: 4px 8px; box-sizing: border-box; }
-input[type="file"], input[type="text"], button { margin-bottom: 6px; }
+#modal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.85);
+  align-items: center;
+  justify-content: center;
+  overflow-y: auto;
+  z-index: 1000;
+}
+#modalContent {
+  background: #fff;
+  padding: 8px;
+  max-width: 95vw;
+  max-height: 95vh;
+  box-sizing: border-box;
+  overflow-y: auto;
+}
+#modalImage {
+  max-width: 100%;
+  max-height: 70vh;
+  display: block;
+  margin: 0 auto 10px;
+}
 </style>
 </head>
 <body>
 
-<h1>絵ブックマーク</h1>
+<h1>絵ブックマーク v0.7</h1>
 
-<div>
+<div class="add-form">
   <input type="file" id="imageInput" accept="image/*"><br>
   <input type="text" id="urlInput" placeholder="元ツイートURL"><br>
   <input type="text" id="authorInput" placeholder="作者名"><br>
@@ -43,16 +85,16 @@ input[type="file"], input[type="text"], button { margin-bottom: 6px; }
   <button id="importBtn">バックアップ復元</button>
 </div>
 
-<h2>並び順</h2>
+<h2>並び順・フィルタ</h2>
 <select id="sortSelect" onchange="render()">
   <option value="new">新しい順</option>
   <option value="old">古い順</option>
   <option value="fav">お気に入り優先</option>
 </select>
+<button onclick="clearFilters()">フィルタ解除</button>
 
 <h2>タグ</h2>
 <div id="tags"></div>
-
 <h2>一覧</h2>
 <div id="list"></div>
 
@@ -61,7 +103,10 @@ input[type="file"], input[type="text"], button { margin-bottom: 6px; }
   <div id="modalContent">
     <button onclick="closeModal()">×</button>
     <img id="modalImage">
-    <div>⭐ <button id="favBtn"></button></div>
+
+    <div>
+      ⭐ <button id="favBtn"></button>
+    </div>
 
     <h3>タグ（Enterで追加）</h3>
     <div id="modalTags"></div>
@@ -69,7 +114,11 @@ input[type="file"], input[type="text"], button { margin-bottom: 6px; }
 
     <hr>
 
-    <div><strong>作者：</strong> <span id="modalAuthor" style="cursor:pointer; text-decoration:underline"></span></div>
+    <div>
+      <strong>作者：</strong>
+      <span id="modalAuthor" style="cursor:pointer; text-decoration:underline"></span>
+    </div>
+
     <label>作者メモ</label>
     <textarea id="authorMemo"></textarea>
 
@@ -82,9 +131,13 @@ input[type="file"], input[type="text"], button { margin-bottom: 6px; }
 <script>
 const STORAGE_KEY = "artBookmarks";
 let items = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
-let activeTag = null, activeAuthor = null, currentItem = null;
+let activeTags = [];
+let activeAuthor = null;
+let currentItem = null;
 
-function save() { localStorage.setItem(STORAGE_KEY, JSON.stringify(items)); }
+function save() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+}
 
 function addItem() {
   const file = imageInput.files[0];
@@ -97,97 +150,160 @@ function addItem() {
       url: urlInput.value,
       author: authorInput.value.trim(),
       authorMemo: "",
-      tags: tagInput.value.split(",").map(t=>t.trim()).filter(Boolean),
+      tags: tagInput.value.split(",").map(t => t.trim()).filter(Boolean),
       favorite: false
     });
-    save(); imageInput.value=""; urlInput.value=""; authorInput.value=""; tagInput.value="";
+    save();
+    imageInput.value = urlInput.value = authorInput.value = tagInput.value = "";
     render();
   };
   reader.readAsDataURL(file);
 }
 
-function render() { renderTags(); renderList(); }
+function render() {
+  renderTags();
+  renderList();
+}
 
 function renderTags() {
-  const allTags = [...new Set(items.flatMap(i=>i.tags))];
-  tags.innerHTML="";
-  allTags.forEach(t=>{
-    const span=document.createElement("span");
-    span.className="tag"+(t===activeTag?" active":"");
-    span.textContent=t;
-    span.onclick=()=>{ activeTag=(activeTag===t?null:t); activeAuthor=null; render(); };
+  const allTags = [...new Set(items.flatMap(i => i.tags))];
+  tags.innerHTML = "";
+  allTags.forEach(t => {
+    const span = document.createElement("span");
+    span.className = "tag" + (activeTags.includes(t) ? " active" : "");
+    span.textContent = t;
+    span.onclick = () => {
+      if (activeTags.includes(t)) activeTags = activeTags.filter(x => x !== t);
+      else activeTags.push(t);
+      activeAuthor = null;
+      render();
+    };
     tags.appendChild(span);
   });
 }
 
 function renderList() {
-  list.innerHTML="";
-  let filtered = items.filter(i=>(!activeTag||i.tags.includes(activeTag))&&(!activeAuthor||i.author===activeAuthor));
-  const sort=sortSelect.value;
-  if(sort==="old") filtered=[...filtered].reverse();
-  if(sort==="fav") filtered=[...filtered].sort((a,b)=>b.favorite-a.favorite);
-  filtered.forEach(i=>{
-    const img=document.createElement("img");
-    img.src=i.image; img.onclick=()=>openModal(i);
-    const div=document.createElement("div"); div.className="card"; div.appendChild(img);
+  list.innerHTML = "";
+  let filtered = items.filter(i =>
+    (activeTags.length === 0 || activeTags.every(t => i.tags.includes(t))) &&
+    (!activeAuthor || i.author === activeAuthor)
+  );
+
+  const sort = sortSelect.value;
+  if (sort === "old") filtered = [...filtered].reverse();
+  if (sort === "fav") filtered = [...filtered].sort((a,b) => b.favorite - a.favorite);
+
+  filtered.forEach(i => {
+    const img = document.createElement("img");
+    img.src = i.image;
+    img.onclick = () => openModal(i);
+    const div = document.createElement("div");
+    div.className = "card";
+    div.appendChild(img);
     list.appendChild(div);
   });
 }
 
-/* ===== モーダル ===== */
-function openModal(item) {
-  currentItem=item; modal.style.display="flex"; modalImage.src=item.image;
-  favBtn.textContent=item.favorite?"解除":"お気に入り";
-  favBtn.onclick=()=>{ item.favorite=!item.favorite; save(); openModal(item); render(); };
-  modalAuthor.textContent=item.author||"(未設定)";
-  modalAuthor.onclick=()=>{ if(item.author){ activeAuthor=item.author; activeTag=null; closeModal(); render(); } };
-  authorMemo.value=item.authorMemo||""; authorMemo.onchange=()=>{ item.authorMemo=authorMemo.value; save(); };
-  renderModalTags();
-  openUrlBtn.onclick=()=>{ if(item.url) window.open(item.url,"_blank"); };
-  deleteBtn.onclick=()=>{ if(confirm("この画像を削除する？")){ items=items.filter(i=>i.id!==item.id); save(); closeModal(); render(); } };
+function clearFilters() {
+  activeTags = [];
+  activeAuthor = null;
+  render();
 }
 
-function renderModalTags(){
-  modalTags.innerHTML="";
-  currentItem.tags.forEach(t=>{
-    const span=document.createElement("span"); span.className="tag"; span.textContent=t;
-    span.onclick=()=>{ if(confirm(`タグ「${t}」を削除する？`)){ currentItem.tags=currentItem.tags.filter(x=>x!==t); save(); renderModalTags(); render(); } };
+/* ===== モーダル ===== */
+function openModal(item) {
+  currentItem = item;
+  modal.style.display = "flex";
+  modalImage.src = item.image;
+  favBtn.textContent = item.favorite ? "解除" : "お気に入り";
+  favBtn.onclick = () => {
+    item.favorite = !item.favorite;
+    save();
+    openModal(item);
+    render();
+  };
+  modalAuthor.textContent = item.author || "(未設定)";
+  modalAuthor.onclick = () => {
+    if (item.author) {
+      activeAuthor = item.author;
+      activeTags = [];
+      closeModal();
+      render();
+    }
+  };
+  authorMemo.value = item.authorMemo || "";
+  authorMemo.onchange = () => { item.authorMemo = authorMemo.value; save(); };
+  renderModalTags();
+  openUrlBtn.onclick = () => { if (item.url) window.open(item.url, "_blank"); };
+  deleteBtn.onclick = () => {
+    if (confirm("この画像を削除する？")) {
+      items = items.filter(i => i.id !== item.id);
+      save();
+      closeModal();
+      render();
+    }
+  };
+}
+
+function renderModalTags() {
+  modalTags.innerHTML = "";
+  currentItem.tags.forEach(t => {
+    const span = document.createElement("span");
+    span.className = "tag";
+    span.textContent = t;
+    span.onclick = () => {
+      if (confirm(`タグ「${t}」を削除する？`)) {
+        currentItem.tags = currentItem.tags.filter(x => x !== t);
+        save();
+        renderModalTags();
+        render();
+      }
+    };
     modalTags.appendChild(span);
   });
 }
 
-modalTagInput.addEventListener("keydown", e=>{
-  if(e.key==="Enter"){ e.preventDefault(); const t=modalTagInput.value.trim(); if(t&&!currentItem.tags.includes(t)){ currentItem.tags.push(t); save(); renderModalTags(); render(); } modalTagInput.value=""; }
+modalTagInput.addEventListener("keydown", e => {
+  if (e.key === "Enter") {
+    e.preventDefault();
+    const t = modalTagInput.value.trim();
+    if (t && !currentItem.tags.includes(t)) {
+      currentItem.tags.push(t);
+      save();
+      renderModalTags();
+      render();
+    }
+    modalTagInput.value = "";
+  }
 });
 
-function closeModal(){ modal.style.display="none"; currentItem=null; }
+function closeModal() {
+  modal.style.display = "none";
+  currentItem = null;
+}
 
-/* ===== バックアップ保存（PC/iOS対応） ===== */
-exportBtn.onclick=()=>{
-  const dataStr=JSON.stringify(items,null,2);
-  const isiOS=/iPhone|iPad|iPod/.test(navigator.userAgent);
-  if(isiOS){
-    const w=window.open(); w.document.write('<pre>'+dataStr+'</pre>');
-    alert("iOSではダウンロードできないため、JSONをコピーしてください。");
-  }else{
-    const blob=new Blob([dataStr],{type:"application/json"});
-    const url=URL.createObjectURL(blob);
-    const a=document.createElement("a"); a.href=url; a.download="artBookmarks_backup.json"; a.click();
-    URL.revokeObjectURL(url);
-  }
+/* バックアップ */
+document.getElementById("exportBtn").onclick = () => {
+  const blob = new Blob([JSON.stringify(items)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'artBookmarks.json';
+  a.click();
+  URL.revokeObjectURL(a.href);
 };
-
-/* ===== 復元（PC/iOS共通） ===== */
-importBtn.onclick=()=>{
-  const file=importInput.files[0];
-  if(!file) return alert("JSONファイルを選んでください");
-  const reader=new FileReader();
-  reader.onload=()=>{
-    try{
-      const imported=JSON.parse(reader.result);
-      if(!Array.isArray(imported)) throw "不正な形式です";
-      items=imported; save(); render(); alert("復元しました！");
-    }catch(e){ alert("読み込みに失敗しました: "+e); }
+document.getElementById("importBtn").onclick = () => {
+  const file = document.getElementById("importInput").files[0];
+  if (!file) return alert("JSONファイルを選んでください");
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const imported = JSON.parse(reader.result);
+      if (!Array.isArray(imported)) throw "不正な形式です";
+      items = imported;
+      save();
+      render();
+      alert("復元しました！");
+    } catch (e) { alert("読み込みに失敗しました: " + e); }
   };
   reader.readAsText(file);
 };
