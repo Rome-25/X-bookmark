@@ -3,16 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
 <title>イラスト管理 v0.3</title>
 
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="X Bookmark">
 
-
-
-  
 <style>
 body {
   font-family: system-ui, sans-serif;
@@ -43,13 +39,12 @@ h1 { font-size: 20px; }
 .tag.active {
   background: #ddd;
 }
-  
+
 hr {
   margin: 12px 0;
   border: none;
   border-top: 1px solid #ddd;
 }
-
 
 /* モーダル */
 #modal {
@@ -65,24 +60,22 @@ hr {
   padding: 8px;
   max-width: 95vw;
   max-height: 95vh;
-
-  overflow-y: auto;   /* ← これを必ず入れる */
+  overflow-y: auto;
   box-sizing: border-box;
 }
 
 #modalImage {
   max-width: 100%;
-  max-height:  70vh;
+  max-height: 70vh;
   display: block;
   margin:0 auto 10px;
 }
-  
+
 #modalTagInput {
   width: 100%;
   max-width: 100%;
   box-sizing: border-box;
 }
-
 
 label {
   font-size: 12px;
@@ -102,8 +95,8 @@ textarea {
 
 input[type="text"] {
   width: 100%;
-  max-width: 280px;   /* ← ここで「短さ」を決める */
-  height: 32px;       /* ← 高さを低く */
+  max-width: 280px;
+  height: 32px;
   font-size: 14px;
   padding: 4px 8px;
   box-sizing: border-box;
@@ -114,7 +107,6 @@ input[type="text"],
 button {
   margin-bottom: 6px;
 }
-
 </style>
 </head>
 <body>
@@ -127,8 +119,8 @@ button {
   <input type="text" id="authorInput" placeholder="作者名"><br>
   <input type="text" id="tagInput" placeholder="タグ（カンマ区切り）"><br>
   <button onclick="addItem()">追加</button>
-  <button id="exportBtn">バックアップ保存</button>
-　<input type="file" id="importInput" accept=".json">
+  <button id="exportBtn">バックアップ保存</button><br>
+  <input type="file" id="importInput" accept=".json">
   <button id="importBtn">バックアップ復元</button>
 </div>
 
@@ -157,18 +149,18 @@ button {
     </div>
 
     <h3>タグ（Enterで追加）</h3>
-<div id="modalTags"></div>
-<input type="text" id="modalTagInput" placeholder="タグを入力してEnter">
+    <div id="modalTags"></div>
+    <input type="text" id="modalTagInput" placeholder="タグを入力してEnter">
 
-<hr>
+    <hr>
 
-<div>
-  <strong>作者：</strong>
-  <span id="modalAuthor" style="cursor:pointer; text-decoration:underline"></span>
-</div>
+    <div>
+      <strong>作者：</strong>
+      <span id="modalAuthor" style="cursor:pointer; text-decoration:underline"></span>
+    </div>
 
-<label>作者メモ</label>
-<textarea id="authorMemo"></textarea>
+    <label>作者メモ</label>
+    <textarea id="authorMemo"></textarea>
 
     <br><br>
     <button id="openUrlBtn">元ツイートを見る</button>
@@ -187,6 +179,7 @@ function save() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
 }
 
+// 追加
 function addItem() {
   const file = imageInput.files[0];
   if (!file) return alert("画像を選択してください");
@@ -212,6 +205,7 @@ function addItem() {
   reader.readAsDataURL(file);
 }
 
+// タグと一覧描画
 function render() {
   renderTags();
   renderList();
@@ -225,7 +219,7 @@ function renderTags() {
     span.className = "tag" + (t === activeTag ? " active" : "");
     span.textContent = t;
     span.onclick = () => {
-      activeTag = (activeTag === t) ? null : t;
+      activeTag = (activeTag === t ? null : t);
       activeAuthor = null;
       render();
     };
@@ -256,7 +250,6 @@ function renderList() {
 }
 
 /* ===== モーダル ===== */
-
 function openModal(item) {
   currentItem = item;
   modal.style.display = "flex";
@@ -338,7 +331,21 @@ function closeModal() {
   modal.style.display = "none";
   currentItem = null;
 }
-  
+
+/* ===== バックアップ・復元 ===== */
+document.getElementById("exportBtn").onclick = () => {
+  const dataStr = JSON.stringify(items, null, 2);
+  const blob = new Blob([dataStr], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "artBookmarks_backup.json";
+  a.click();
+
+  URL.revokeObjectURL(url);
+};
+
 document.getElementById("importBtn").onclick = () => {
   const file = document.getElementById("importInput").files[0];
   if (!file) return alert("JSONファイルを選んでください");
@@ -348,7 +355,7 @@ document.getElementById("importBtn").onclick = () => {
     try {
       const imported = JSON.parse(reader.result);
       if (!Array.isArray(imported)) throw "不正な形式です";
-      items = imported; // 上書き
+      items = imported;
       save();
       render();
       alert("復元しました！");
@@ -364,16 +371,3 @@ render();
 
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
