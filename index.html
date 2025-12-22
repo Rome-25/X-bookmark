@@ -65,10 +65,18 @@ label {
   font-size: 12px;
   color: #555;
 }
-textarea, input[type=text] {
+textarea {
   width: 100%;
+  max-width: 280px;
+  height: 32px !important;
+  min-height: 32px !important;
+  font-size: 14px;
+  padding: 4px 8px;
   box-sizing: border-box;
+  resize: none;
+  overflow: hidden;
 }
+
 input[type="text"] {
   width: 100%;
   max-width: 280px;   /* ← ここで「短さ」を決める */
@@ -76,6 +84,20 @@ input[type="text"] {
   font-size: 14px;
   padding: 4px 8px;
   box-sizing: border-box;
+}
+.add-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.add-form input[type="text"] {
+  max-width: 160px;
+}
+
+.add-form button {
+  height: 32px;
 }
 
 </style>
@@ -85,10 +107,10 @@ input[type="text"] {
 <h1>絵ブックマーク</h1>
 
 <div>
-  <input type="file" id="imageInput" accept="image/*"><br>
-  <input type="text" id="urlInput" placeholder="元ツイートURL（任意）"><br>
-  <input type="text" id="authorInput" placeholder="作者名"><br>
-  <input type="text" id="tagInput" placeholder="タグ（カンマ区切り）"><br>
+  <input type="file" id="imageInput" accept="image/*">
+  <input type="text" id="urlInput" placeholder="元ツイートURL">
+  <input type="text" id="authorInput" placeholder="作者名">
+  <input type="text" id="tagInput" placeholder="タグ（カンマ区切り）">
   <button onclick="addItem()">追加</button>
 </div>
 
@@ -122,7 +144,7 @@ input[type="text"] {
     </div>
 
     <label>作者メモ</label>
-    <textarea id="authorMemo" rows="2"></textarea>
+    <textarea id="authorMemo"></textarea>
 
     <h3>タグ（Enterで追加）</h3>
     <div id="modalTags"></div>
@@ -302,3 +324,4 @@ render();
 
 </body>
 </html>
+
