@@ -2,314 +2,236 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>イラスト管理 v0.7</title>
+<title>イラストアーカイブ v0.6</title>
+
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="X Bookmark">
 
 <style>
-body {
-  font-family: system-ui, sans-serif;
-  margin: 16px;
-}
-h1 { font-size: 20px; }
+body { font-family: system-ui, sans-serif; margin:16px; }
+h1{ font-size:20px; }
 
-#list {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-  gap: 8px;
-}
-.card img {
-  width: 100%;
-  display: block;
-  cursor: pointer;
-}
-.tag {
-  display: inline-block;
-  padding: 2px 6px;
-  margin: 2px;
-  border: 1px solid #888;
-  cursor: pointer;
-  font-size: 12px;
-}
-.tag.active {
-  background: #ddd;
-}
-input, button, select, textarea {
-  font-size: 14px;
-  padding: 6px;
+input, select, button { width:100%; box-sizing:border-box; margin-bottom:6px; }
+#list{ display:grid; grid-template-columns:repeat(auto-fill,minmax(120px,1fr)); gap:8px; }
+.card img{ width:100%; display:block; cursor:pointer; }
+.card{ padding-bottom:4px; }
+.card .author{ font-size:10px; opacity:0.7; }
+.card .state{ font-size:10px; padding:1px 4px; border-radius:4px; background:orange; color:#fff; margin-top:2px; display:inline-block; }
+
+.tag{ font-size:11px; padding:2px 6px; border:1px solid #888; border-radius:6px; cursor:pointer; margin:1px; }
+.tag.active{ background:#ddd; }
+
+#modal{ display:none; position:fixed; inset:0; background:rgba(0,0,0,0.85); justify-content:center; align-items:center; z-index:999; }
+#modalContent{ background:#fff; padding:10px; max-width:90%; max-height:90%; overflow:auto; position:relative; }
+#modalImage{ max-width:100%; max-height:60vh; display:block; margin-bottom:8px; cursor:grab; }
+#modalTags{ display:flex; flex-wrap:wrap; gap:4px; margin-bottom:4px; }
+#notification{ position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:#333; color:#fff; padding:6px 12px; border-radius:6px; display:none; opacity:0.9; }
+#breadcrumbs{ font-size:12px; margin-bottom:4px; color:#555; }
+
+/* 入力欄とプルダウンを並べる */
+.input-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
   margin-bottom: 6px;
-  box-sizing: border-box;
 }
 
-/* モーダル */
-#modal {
-  display: none;
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,0.85);
-  align-items: center;
-  justify-content: center;
-  overflow-y: auto;
-  z-index: 1000;
+.input-row input,
+.input-row select {
+  flex: 1;         /* 可能な幅を均等に使う */
+  min-width: 80px; /* これ以上小さくならない */
 }
-#modalContent {
-  background: #fff;
-  padding: 8px;
-  max-width: 95vw;
-  max-height: 95vh;
-  box-sizing: border-box;
-  overflow-y: auto;
+
+.input-row button {
+  flex: 0 0 auto;  /* 追加ボタンは固定幅 */
 }
-#modalImage {
-  max-width: 100%;
-  max-height: 70vh;
-  display: block;
-  margin: 0 auto 10px;
-}
+
+
 </style>
 </head>
 <body>
 
-<h1>絵ブックマーク v0.7</h1>
+<h1>イラストアーカイブ</h1>
 
-<div class="add-form">
-  <input type="file" id="imageInput" accept="image/*"><br>
-  <input type="text" id="urlInput" placeholder="元ツイートURL"><br>
-  <input type="text" id="authorInput" placeholder="作者名"><br>
-  <input type="text" id="tagInput" placeholder="タグ（カンマ区切り）"><br>
+<div class="input-row">
+  <input type="file" id="imageInput" accept="image/*">
+  <input type="text" id="urlInput" placeholder="元ツイートURL">
+  <input type="text" id="authorInput" placeholder="作者名">
+  <input type="text" id="tagInput" placeholder="タグ（カンマ区切り）">
+
+  <select id="groupSelect">
+    <option value="genre">ジャンル</option>
+    <option value="style">作風</option>
+    <option value="parts">パーツ</option>
+  </select>
+  <select id="stateSelect">
+    <option value="">状態なし</option>
+    <option value="完成">完成</option>
+    <option value="塗り">塗り</option>
+    <option value="線画">線画</option>
+    <option value="ラフ">ラフ</option>
+    <option value="構想">構想</option>
+  </select>
   <button onclick="addItem()">追加</button>
-  <button id="exportBtn">バックアップ保存</button>
-  <input type="file" id="importInput" accept=".json">
-  <button id="importBtn">バックアップ復元</button>
+
 </div>
 
-<h2>並び順・フィルタ</h2>
 <select id="sortSelect" onchange="render()">
   <option value="new">新しい順</option>
   <option value="old">古い順</option>
   <option value="fav">お気に入り優先</option>
 </select>
-<button onclick="clearFilters()">フィルタ解除</button>
 
-<h2>タグ</h2>
+<h3>タグ</h3>
 <div id="tags"></div>
-<h2>一覧</h2>
+
+<h3>一覧</h3>
 <div id="list"></div>
 
 <!-- モーダル -->
 <div id="modal">
   <div id="modalContent">
+    <div id="breadcrumbs"></div>
     <button onclick="closeModal()">×</button>
     <img id="modalImage">
-
+    ⭐ <button id="favBtn"></button>
     <div>
-      ⭐ <button id="favBtn"></button>
+      <label>作者</label>
+      <input type="text" id="editAuthor">
     </div>
 
-    <h3>タグ（Enterで追加）</h3>
+    <div>
+      <label>状態タグ</label>
+      <select id="modalState"></select>
+    </div>
+
+    <h4>タグ</h4>
     <div id="modalTags"></div>
-    <input type="text" id="modalTagInput" placeholder="タグを入力してEnter">
+    <input type="text" id="modalTagInput" placeholder="Enterでタグ追加">
 
-    <hr>
-
-    <div>
-      <strong>作者：</strong>
-      <span id="modalAuthor" style="cursor:pointer; text-decoration:underline"></span>
-    </div>
-
-    <label>作者メモ</label>
-    <textarea id="authorMemo"></textarea>
-
-    <br><br>
     <button id="openUrlBtn">元ツイートを見る</button>
     <button id="deleteBtn">削除</button>
   </div>
 </div>
 
+<div id="notification"></div>
+
 <script>
-const STORAGE_KEY = "artBookmarks";
-let items = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
-let activeTags = [];
-let activeAuthor = null;
-let currentItem = null;
+let db;
+let items=[], currentItem=null, modalHistory=[];
+const req = indexedDB.open("artDB",1);
+req.onupgradeneeded = e => { db=e.target.result; db.createObjectStore("arts",{keyPath:"id"}); };
+req.onsuccess = e=>{ db=e.target.result; loadAll(); };
 
-function save() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
-}
+function saveItem(item){ db.transaction("arts","readwrite").objectStore("arts").put(item); }
+function deleteItem(id){ db.transaction("arts","readwrite").objectStore("arts").delete(id); }
+function loadAll(){ db.transaction("arts","readonly").objectStore("arts").getAll().onsuccess=e=>{ items=e.target.result; render(); }; }
 
-function addItem() {
-  const file = imageInput.files[0];
-  if (!file) return alert("画像を選択してください");
-  const reader = new FileReader();
-  reader.onload = () => {
-    items.unshift({
-      id: Date.now(),
-      image: reader.result,
-      url: urlInput.value,
-      author: authorInput.value.trim(),
-      authorMemo: "",
-      tags: tagInput.value.split(",").map(t => t.trim()).filter(Boolean),
-      favorite: false
-    });
-    save();
-    imageInput.value = urlInput.value = authorInput.value = tagInput.value = "";
+function addItem(){
+  const file=imageInput.files[0]; if(!file)return alert("画像を選択してください");
+  const reader=new FileReader();
+  reader.onload=()=>{
+    const item={ id:Date.now(), image:reader.result, url:urlInput.value, author:authorInput.value, tags:tagInput.value.split(",").map(t=>t.trim()).filter(Boolean), favorite:false, state:stateSelect.value, group:groupSelect.value, date:new Date().toLocaleDateString(), related:[] };
+    items.unshift(item); saveItem(item);
+    imageInput.value=urlInput.value=authorInput.value=tagInput.value="";
     render();
   };
   reader.readAsDataURL(file);
 }
 
-function render() {
+function render(){
   renderTags();
   renderList();
 }
 
-function renderTags() {
-  const allTags = [...new Set(items.flatMap(i => i.tags))];
-  tags.innerHTML = "";
-  allTags.forEach(t => {
-    const span = document.createElement("span");
-    span.className = "tag" + (activeTags.includes(t) ? " active" : "");
-    span.textContent = t;
-    span.onclick = () => {
-      if (activeTags.includes(t)) activeTags = activeTags.filter(x => x !== t);
-      else activeTags.push(t);
-      activeAuthor = null;
-      render();
-    };
-    tags.appendChild(span);
+function renderTags(){
+  tags.innerHTML="";
+  [...new Set(items.flatMap(i=>i.tags))].forEach(t=>{
+    const s=document.createElement("span");
+    s.className="tag"+(t===activeTag?" active":"");
+    s.textContent=t;
+    s.onclick=()=>{ activeTag=activeTag===t?null:t; render(); };
+    tags.appendChild(s);
   });
 }
 
-function renderList() {
-  list.innerHTML = "";
-  let filtered = items.filter(i =>
-    (activeTags.length === 0 || activeTags.every(t => i.tags.includes(t))) &&
-    (!activeAuthor || i.author === activeAuthor)
-  );
+function renderList(){
+  list.innerHTML="";
+  let filtered=items;
+  if(activeTag) filtered=filtered.filter(i=>i.tags.includes(activeTag));
+  if(sortSelect.value==="old") filtered=[...filtered].reverse();
+  if(sortSelect.value==="fav") filtered=[...filtered].sort((a,b)=>b.favorite-a.favorite);
 
-  const sort = sortSelect.value;
-  if (sort === "old") filtered = [...filtered].reverse();
-  if (sort === "fav") filtered = [...filtered].sort((a,b) => b.favorite - a.favorite);
-
-  filtered.forEach(i => {
-    const img = document.createElement("img");
-    img.src = i.image;
-    img.onclick = () => openModal(i);
-    const div = document.createElement("div");
-    div.className = "card";
-    div.appendChild(img);
-    list.appendChild(div);
+  filtered.forEach(i=>{
+    const div=document.createElement("div"); div.className="card";
+    const img=document.createElement("img"); img.src=i.image; img.onclick=()=>openModal(i);
+    const authorDiv=document.createElement("div"); authorDiv.className="author"; authorDiv.textContent=i.author||"";
+    const stateDiv=document.createElement("div"); stateDiv.className="state"; stateDiv.textContent=i.state||"";
+    div.append(img, stateDiv, authorDiv); list.appendChild(div);
   });
-}
-
-function clearFilters() {
-  activeTags = [];
-  activeAuthor = null;
-  render();
 }
 
 /* ===== モーダル ===== */
-function openModal(item) {
-  currentItem = item;
-  modal.style.display = "flex";
-  modalImage.src = item.image;
-  favBtn.textContent = item.favorite ? "解除" : "お気に入り";
-  favBtn.onclick = () => {
-    item.favorite = !item.favorite;
-    save();
-    openModal(item);
-    render();
-  };
-  modalAuthor.textContent = item.author || "(未設定)";
-  modalAuthor.onclick = () => {
-    if (item.author) {
-      activeAuthor = item.author;
-      activeTags = [];
-      closeModal();
-      render();
-    }
-  };
-  authorMemo.value = item.authorMemo || "";
-  authorMemo.onchange = () => { item.authorMemo = authorMemo.value; save(); };
+function openModal(item){
+  if(currentItem) modalHistory.push(currentItem);
+  currentItem=item;
+  modal.style.display="flex";
+  modalImage.src=item.image;
+  favBtn.textContent=item.favorite?"解除":"お気に入り";
+  favBtn.onclick=()=>{ item.favorite=!item.favorite; saveItem(item); openModal(item); render(); };
+
+  editAuthor.value=item.author;
+  editAuthor.onchange=()=>{ item.author=editAuthor.value; saveItem(item); render(); };
+
+  modalState.innerHTML="";
+  ["","完成","塗り","線画","ラフ","構想"].forEach(s=>{
+    const opt=document.createElement("option"); opt.value=s; opt.textContent=s; if(s===item.state) opt.selected=true; modalState.append(opt);
+  });
+  modalState.onchange=()=>{ item.state=modalState.value; saveItem(item); showNotification(`状態を${modalState.value}に変更`); render(); };
+
   renderModalTags();
-  openUrlBtn.onclick = () => { if (item.url) window.open(item.url, "_blank"); };
-  deleteBtn.onclick = () => {
-    if (confirm("この画像を削除する？")) {
-      items = items.filter(i => i.id !== item.id);
-      save();
-      closeModal();
-      render();
-    }
-  };
+  breadcrumbs.textContent=modalHistory.map(it=>it.date||it.id).join(" > ");
+
+  openUrlBtn.onclick=()=>{ if(item.url) window.open(item.url); };
+  deleteBtn.onclick=()=>{ if(confirm("削除しますか？")){ deleteItem(item.id); items=items.filter(x=>x.id!==item.id); closeModal(); render(); } };
+
+  // ズーム＋ドラッグ
+  modalImage.style.transform="translate(0px,0px) scale(1)";
+  let scale=1, pos={x:0,y:0}, drag={x:0,y:0}, dragging=false;
+  modalImage.onmousedown=e=>{ dragging=true; drag.x=e.clientX; drag.y=e.clientY; modalImage.style.cursor="grabbing"; };
+  window.onmousemove=e=>{ if(dragging){ const dx=e.clientX-drag.x, dy=e.clientY-drag.y; pos.x+=dx; pos.y+=dy; modalImage.style.transform=`translate(${pos.x}px,${pos.y}px) scale(${scale})`; drag.x=e.clientX; drag.y=e.clientY; } };
+  window.onmouseup=e=>{ dragging=false; modalImage.style.cursor="grab"; };
+  modalImage.ondblclick=e=>{ scale=scale===1?2:1; modalImage.style.transform=`translate(${pos.x}px,${pos.y}px) scale(${scale})`; };
 }
 
-function renderModalTags() {
-  modalTags.innerHTML = "";
-  currentItem.tags.forEach(t => {
-    const span = document.createElement("span");
-    span.className = "tag";
-    span.textContent = t;
-    span.onclick = () => {
-      if (confirm(`タグ「${t}」を削除する？`)) {
-        currentItem.tags = currentItem.tags.filter(x => x !== t);
-        save();
-        renderModalTags();
-        render();
-      }
-    };
-    modalTags.appendChild(span);
+function renderModalTags(){
+  modalTags.innerHTML="";
+  if(!currentItem||!currentItem.tags) return;
+  currentItem.tags.forEach(t=>{
+    const s=document.createElement("span"); s.className="tag"; s.textContent=t;
+    s.onclick=()=>{ if(confirm(`タグ「${t}」を削除しますか？`)){ currentItem.tags=currentItem.tags.filter(x=>x!==t); saveItem(currentItem); renderModalTags(); render(); } };
+    modalTags.appendChild(s);
   });
 }
 
-modalTagInput.addEventListener("keydown", e => {
-  if (e.key === "Enter") {
-    e.preventDefault();
-    const t = modalTagInput.value.trim();
-    if (t && !currentItem.tags.includes(t)) {
-      currentItem.tags.push(t);
-      save();
-      renderModalTags();
-      render();
-    }
-    modalTagInput.value = "";
-  }
-});
+modalTagInput.onkeydown=e=>{
+  if(e.key==="Enter"){ const t=modalTagInput.value.trim(); if(t && !currentItem.tags.includes(t)){ currentItem.tags.push(t); saveItem(currentItem); renderModalTags(); render(); } modalTagInput.value=""; }
+};
 
-function closeModal() {
-  modal.style.display = "none";
-  currentItem = null;
+function closeModal(){
+  modal.style.display="none";
+  currentItem=null;
+  modalHistory=[];
 }
 
-/* バックアップ */
-document.getElementById("exportBtn").onclick = () => {
-  const blob = new Blob([JSON.stringify(items)], { type: 'application/json' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = 'artBookmarks.json';
-  a.click();
-  URL.revokeObjectURL(a.href);
-};
-document.getElementById("importBtn").onclick = () => {
-  const file = document.getElementById("importInput").files[0];
-  if (!file) return alert("JSONファイルを選んでください");
-  const reader = new FileReader();
-  reader.onload = () => {
-    try {
-      const imported = JSON.parse(reader.result);
-      if (!Array.isArray(imported)) throw "不正な形式です";
-      items = imported;
-      save();
-      render();
-      alert("復元しました！");
-    } catch (e) { alert("読み込みに失敗しました: " + e); }
-  };
-  reader.readAsText(file);
-};
+modal.addEventListener("click",e=>{ if(e.target===modal) closeModal(); });
+document.addEventListener("keydown",e=>{ if(e.key==="Escape" && modal.style.display==="flex") closeModal(); });
 
-render();
+function showNotification(msg){
+  const n=document.getElementById("notification"); n.textContent=msg; n.style.display="block";
+  setTimeout(()=>{ n.style.display="none"; },1200);
+}
 </script>
 
 </body>
 </html>
+
