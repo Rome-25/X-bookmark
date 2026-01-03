@@ -11,8 +11,19 @@ body { font-family: system-ui, sans-serif; margin:16px; }
 h1{ font-size:20px; }
 
 input, select, button { width:100%; box-sizing:border-box; margin-bottom:6px; }
-#list{ display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:12px; }
-.card img{ width:100%; display:block; cursor:pointer; }
+#list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); /* 120px → 200pxに変更 */
+  gap: 12px; /* 間隔も少し広めに */
+}
+
+.card img {
+  width: 100%;  /* カード幅に合わせて拡大 */
+  display: block;
+  cursor: pointer;
+  border-radius: 6px;
+  object-fit: cover; /* 縦横比を維持してカードに収める */
+}
 .card{ padding-bottom:4px; }
 .card .author{ font-size:10px; opacity:0.7; }
 .card .state{ font-size:10px; padding:1px 4px; border-radius:4px; background:orange; color:#fff; margin-top:2px; display:inline-block; }
