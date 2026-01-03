@@ -27,24 +27,20 @@ input, select, button { width:100%; box-sizing:border-box; margin-bottom:6px; }
 #notification{ position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:#333; color:#fff; padding:6px 12px; border-radius:6px; display:none; opacity:0.9; }
 #breadcrumbs{ font-size:12px; margin-bottom:4px; color:#555; }
 
-/* 入力欄とプルダウンを並べる */
+/* 入力欄を縦一列にする */
 .input-row {
   display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-bottom: 6px;
+  flex-direction: column; /* 縦に並べる */
+  gap: 6px;               /* 各要素の間隔 */
+  margin-bottom: 12px;
 }
 
 .input-row input,
-.input-row select {
-  flex: 1;         /* 可能な幅を均等に使う */
-  min-width: 80px; /* これ以上小さくならない */
-}
-
+.input-row select,
 .input-row button {
-  flex: 0 0 auto;  /* 追加ボタンは固定幅 */
+  width: 100%;     /* 画面幅いっぱい */
+  box-sizing: border-box;
 }
-
 
 </style>
 </head>
@@ -57,12 +53,13 @@ input, select, button { width:100%; box-sizing:border-box; margin-bottom:6px; }
   <input type="text" id="urlInput" placeholder="元ツイートURL">
   <input type="text" id="authorInput" placeholder="作者名">
   <input type="text" id="tagInput" placeholder="タグ（カンマ区切り）">
-
+  
   <select id="groupSelect">
     <option value="genre">ジャンル</option>
     <option value="style">作風</option>
     <option value="parts">パーツ</option>
   </select>
+  
   <select id="stateSelect">
     <option value="">状態なし</option>
     <option value="完成">完成</option>
@@ -71,10 +68,11 @@ input, select, button { width:100%; box-sizing:border-box; margin-bottom:6px; }
     <option value="ラフ">ラフ</option>
     <option value="構想">構想</option>
   </select>
+  
   <button onclick="addItem()">追加</button>
-
+  
 </div>
-
+  
 <select id="sortSelect" onchange="render()">
   <option value="new">新しい順</option>
   <option value="old">古い順</option>
@@ -234,4 +232,5 @@ function showNotification(msg){
 
 </body>
 </html>
+
 
